@@ -12,8 +12,6 @@ train_data = tv.datasets.MNIST(root="./data_mnist",
                                download=True)
 test_data = tv.datasets.MNIST("./data_mnist", train=False, transform=tv.transforms.ToTensor())
 
-
-
 train_loader = Data.DataLoader(dataset=train_data, batch_size=1000, shuffle=True, num_workers=0)
 test_loader = Data.DataLoader(dataset=test_data, batch_size=500, shuffle=True, num_workers=0)
 
@@ -21,7 +19,9 @@ test_lable = test_data.test_labels
 
 class VGG16(nn.Module):
     def __init__(self):
+
         super(VGG16,self).__init__()
+
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, stride=2, padding=1),
             nn.ReLU(),
@@ -65,6 +65,7 @@ class VGG16(nn.Module):
         x = self.out(x)
 
         return x
+
 
 cnn = VGG16()
 optimizer = torch.optim.Adam(cnn.parameters(), lr=0.001)

@@ -12,34 +12,62 @@ train_data = tv.datasets.MNIST(root="./data_mnist",
                                download=True)
 test_data = tv.datasets.MNIST("./data_mnist", train=False, transform=tv.transforms.ToTensor())
 
-train_loader = Data.DataLoader(dataset=train_data, batch_size=1000, shuffle=True, num_workers=0)
-test_loader = Data.DataLoader(dataset=test_data, batch_size=200, shuffle=True, num_workers=0)
+train_loader = Data.DataLoader(dataset=train_data, batch_size=100, shuffle=True, num_workers=0)
+test_loader = Data.DataLoader(dataset=test_data, batch_size=5000, shuffle=True, num_workers=0)
 
 test_lable = test_data.test_labels
 
 
 class Lenn(nn.Module):
     def __init__(self):
-        super(Lenn,self).__init__()
+        super(Lenn, self).__init__()
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels=1, out_channels=16, kernel_size=5, stride=1, padding=2),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2),
+            nn.Conv2d(in_channels=1, out_channels=6, kernel_size=3, stride=1, padding=1).cuda(),
+            nn.ReLU().cuda(),
         )
 
         self.conv2 = nn.Sequential(
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=5, stride=1, padding=2),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2),
+            nn.Conv2d(in_channels=6, out_channels=16, kernel_size=3, stride=1, padding=1).cuda(),
+            nn.ReLU().cuda(),
+            nn.MaxPool2d(kernel_size=2).cuda(),
         )
 
-        self.out = nn.Linear(32*7*7, 10)
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1).cuda(),
+            nn.ReLU().cuda(),
+        )
+
+        self.conv4 = nn.Sequential(
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1).cuda(),
+            nn.ReLU().cuda(),
+            nn.MaxPool2d(kernel_size=2).cuda(),
+        )
+
+        self.conv5 = nn.Sequential(
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1).cuda(),
+            nn.ReLU().cuda(),
+        )
+
+        self.conv6 = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=1).cuda(),
+            nn.ReLU().cuda(),
+            nn.MaxPool2d(kernel_size=2).cuda(),
+        )
+
+        self.out1 = nn.Linear(256*3*3, 64).cuda()
+        self.out2 = nn.Linear(64, 10).cuda()
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+        x = self.conv5(x)
+        x = self.conv6(x)
+
         x = x.view(x.size(0), -1)
-        x = self.out(x)
+        x = self.out1(x)
+        x = self.out2(x)
 
         return x
 
@@ -178,24 +206,43 @@ cnn = Lenn()
 optimizer = torch.optim.Adam(cnn.parameters(), lr=0.001)
 loss_func = nn.CrossEntropyLoss()
 
-for step, (bx, by) in enumerate(train_loader):
-    bx = Variable(bx)
-    by = Variable(by)
+cuda_gpu = torch.cuda.is_available()
 
-    output = cnn(bx)
-    loss = loss_func(output, by)
+for train_step, (train_x, train_y) in enumerate(train_loader):
+    if cuda_gpu:
+        train_x = Variable(train_x).cuda()
+        train_y = Variable(train_y).cuda()
+    else:
+        train_x = Variable(train_x)
+        train_y = Variable(train_y)
+
+    output = cnn(train_x)
+    loss = loss_func(output, train_y)
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
 
-    for test_step, (test_x,test_y) in enumerate(test_loader):
-        test_out = cnn(test_x)
-        pre_y = torch.max(test_out, 1)[1].data.numpy().squeeze()
-        accuracy = sum(pre_y == test_y.numpy()) / 200
-        print(accuracy)
+    train_out = output.cpu()
+    tra_y = torch.max(train_out, 1)[1].data.numpy().squeeze()
+    train_accuracy = sum(tra_y == train_y.cpu().numpy()) / 100
+    print('train_acc',train_accuracy)
 
 
+for test_step, (test_x,test_y) in enumerate(test_loader):
+    if cuda_gpu:
+        test_x = Variable(test_x).cuda()
+        test_y = Variable(test_y).cuda()
+    else:
+        test_x = Variable(test_x)
+        test_y = Variable(test_y)
 
+    test_out = cnn(test_x).cpu()
+    pre_y = torch.max(test_out, 1)[1].data.numpy().squeeze()
+    accuracy = sum(pre_y == test_y.cpu().numpy()) / 5000
+    print('test_acc',accuracy)
+
+
+torch.save(cnn.state_dict(), 'params.pkl')
 
 
 

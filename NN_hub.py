@@ -3,20 +3,33 @@ import torch.nn as nn
 class MobileNet(nn.Module):
     def __init__(self):
 
-        super(VGG16,self).__init__()
+        super(MobileNet,self).__init__()
 
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
+            nn.Conv2d(in_channels=3,
+                      out_channels=32,
+                      kernel_size=3,
+                      stride=2,
+                      padding=1).cuda(),
+            nn.ReLU().cuda(),
         )
 
         def dw_sep(dw_chanenls, dw_stride, sep_outc):
 
             conv_dw_sep = nn.Sequential(
-                nn.Conv2d(in_channels=dw_chanenls, out_channels=dw_chanenls, kernel_size=3, stride=dw_stride, padding=1, groups=dw_chanenls),
-                nn.ReLU(),
-                nn.Conv2d(in_channels=dw_chanenls, out_channels=sep_outc, kernel_size=1, stride=1, padding=0),
-                nn.ReLU(),
+                nn.Conv2d(in_channels=dw_chanenls,
+                          out_channels=dw_chanenls,
+                          kernel_size=3,
+                          stride=dw_stride,
+                          padding=1,
+                          groups=dw_chanenls).cuda(),
+                nn.ReLU().cuda(),
+                nn.Conv2d(in_channels=dw_chanenls,
+                          out_channels=sep_outc,
+                          kernel_size=1,
+                          stride=1,
+                          padding=0).cuda(),
+                nn.ReLU().cuda(),
             )
 
             return conv_dw_sep
@@ -30,9 +43,10 @@ class MobileNet(nn.Module):
         self.conv7_dw_sep = dw_sep(1024, 2, 1024)
 
         self.pool1 = nn.Sequential(
-            nn.MaxPool2d(kernel_size=7)
+            nn.MaxPool2d(kernel_size=7).cuda()
         )
-        self.out = nn.Linear(1024*1*1, 10)
+        self.out1 = nn.Linear(1024*1*1, 128).cuda()
+        self.out2 = nn.Linear(128, 2).cuda()
 
     def forward(self, x):
         x = self.conv1(x)
@@ -45,7 +59,8 @@ class MobileNet(nn.Module):
         x = self.conv7_dw_sep(x)
         x = self.pool1(x)
         x = x.view(x.size(0), -1)
-        x = self.out(x)
+        x = self.out1(x)
+        x = self.out2(x)
 
         return x
 
@@ -53,7 +68,7 @@ class Lenn(nn.Module):
     def __init__(self):
         super(Lenn, self).__init__()
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels=1, out_channels=6, kernel_size=3, stride=1, padding=1).cuda(),
+            nn.Conv2d(in_channels=3, out_channels=6, kernel_size=3, stride=1, padding=1).cuda(),
             nn.ReLU().cuda(),
         )
 
